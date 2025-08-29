@@ -2,9 +2,10 @@
 
 import { Authenticated, Unauthenticated } from "convex/react";
 import { SignInButton, UserButton, useUser } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useMemo, useState, useCallback } from "react";
+import { deleteHabit } from "@/convex/habits";
 
 // Accessible tab keys
 type ActiveTab = "tasks" | "chat" | "project" | "invite";
@@ -257,7 +258,7 @@ function TabButton({
   onClick,
   active,
   role,
-  ariaSelected, 
+  ariaSelected,
   ariaControls,
   ...rest
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -284,10 +285,68 @@ function TabButton({
 
 /* ------------------ Panel stubs (replace with real components) ------------------ */
 function TasksTab() {
+  const [title, setTitle] = useState("");
+  const habits = useQuery(api.habits.getHabitsForCurrentUser);
+  const createHabit = useMutation(api.habits.createHabit);
+  const deleteHabit = useMutation(api.habits.deleteHabit);
+
+  const onAdd = async () => {
+    const t = title.trim();
+    if (!t) return;
+    await createHabit({ title: t, notes: "", startdate: Date.now() });
+    setTitle(""); // Convex will live-reload the list
+  };
+
+  const loading = habits === undefined;
+
   return (
     <div className="space-y-3">
-      <p className="text-gray-700">✅ Here are your tasks.</p>
-      <div className="rounded-xl border p-4">Task list goes here…</div>
+      <p className="text-gray-700">✅ Your habits</p>
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Add a new habit…"
+          className="w-full rounded-lg border px-3 py-2 shadow-sm focus:border-green-500 focus:ring-green-500"
+        />
+        <button
+          onClick={onAdd}
+          className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+        >
+          ➕
+        </button>
+        
+      </div>
+
+      <div className="rounded-xl border bg-white">
+        {loading ? (
+          <div className="p-4 text-gray-500">Loading…</div>
+        ) : habits.length === 0 ? (
+          <div className="p-4 text-gray-500">
+            No habits yet — add your first one.
+          </div>
+        ) : (
+          <ul className="divide-y">
+            {habits.map((h) => (
+              <li key={h._id} className="p-4 flex items-center justify-between">
+                <span className="font-medium">{h.title}</span>
+                <span className="text-xs text-gray-500">
+                  {new Date(h.createdAt).toLocaleDateString()}
+                  <div className="inline-block mx-2">|</div>
+                  <button
+                    onClick={() => deleteHabit({ habitId: h._id })}
+                    className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                  >
+                    🗑️
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

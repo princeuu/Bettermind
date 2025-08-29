@@ -1,15 +1,14 @@
-import { query } from './_generated/server'
+import { query } from "./_generated/server";
 
 export const getForCurrentUser = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity()
-    if (identity === null) {
-      throw new Error("Not authenticated")
-    }
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
     return await ctx.db
       .query("messages")
-      .filter((q) => q.eq(q.field('author'), identity.email))
-      .collect()
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .order("desc")
+      .collect();
   },
-})
+});
