@@ -48,3 +48,19 @@ export const getHabitsForCurrentUser = query({
     .sort((a, b) => b.createdAt - a.createdAt);
   },
 });
+
+export const numOfHabits = query({
+  args: {userId: v.string()},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      throw new Error("Not authenticated");
+    } 
+
+    const cursor = ctx.db
+      .query("habits")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject));
+    const count = await cursor.collect();
+    return count.length;
+
+  }});

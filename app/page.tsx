@@ -6,6 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useMemo, useState, useCallback } from "react";
 import { deleteHabit } from "@/convex/habits";
+import Image from "next/image";
 
 // Accessible tab keys
 type ActiveTab = "tasks" | "chat" | "project" | "invite";
@@ -22,7 +23,12 @@ export default function Home() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b">
         <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between">
-          <h1 className="text-lg sm:text-xl font-semibold">Bettermind</h1>
+          <Image
+            src="/BetterMindLogo.png"
+            alt="Logo"
+            width={200}
+            height={50}
+          />
           <div className="flex items-center gap-3">
             <Authenticated>
               <UserButton afterSignOutUrl="/" />
@@ -98,7 +104,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-white border-t">
         <div className="mx-auto max-w-5xl px-4 py-4 text-center text-sm text-gray-600">
-          © {new Date().getFullYear()} Bettermind
+          © {new Date().getFullYear()} BetterMind
         </div>
       </footer>
     </div>
@@ -111,7 +117,7 @@ function Dashboard() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("tasks");
 
   const messages = useQuery(api.messages.getForCurrentUser);
-  const tasksCount = 3; // TODO: replace with real data
+  const tasksCount = useQuery(api.habits.numOfHabits, { userId: user?.id ?? "" });
   const notificationsCount = 2; // TODO: replace with real data
 
   const messageCount = messages?.length ?? 0;
@@ -120,7 +126,7 @@ function Dashboard() {
   const stats = useMemo(
     () => [
       { label: "Messages", value: loading ? "—" : messageCount },
-      { label: "Tasks", value: loading ? "—" : tasksCount },
+      { label: "Habits", value: loading ? "—" : tasksCount },
       { label: "Notifications", value: loading ? "—" : notificationsCount },
     ],
     [loading, messageCount, tasksCount, notificationsCount]
@@ -289,6 +295,7 @@ function TasksTab() {
   const habits = useQuery(api.habits.getHabitsForCurrentUser);
   const createHabit = useMutation(api.habits.createHabit);
   const deleteHabit = useMutation(api.habits.deleteHabit);
+  
 
   const onAdd = async () => {
     const t = title.trim();
@@ -330,11 +337,15 @@ function TasksTab() {
         ) : (
           <ul className="divide-y">
             {habits.map((h) => (
-              <li key={h._id} className="p-4 flex items-center justify-between">
-                <span className="font-medium">{h.title}</span>
+              <li key={h._id} className="p-3 flex items-center justify-between">
+                <input 
+                  type="checkbox"
+                  className=" h-5 w-5 text-green-600"
+                />
+                <span className="font-medium p-4 mr-auto">{h.title}</span>
                 <span className="text-xs text-gray-500">
                   {new Date(h.createdAt).toLocaleDateString()}
-                  <div className="inline-block mx-2">|</div>
+                  <div className="inline-block mx-4">|</div>
                   <button
                     onClick={() => deleteHabit({ habitId: h._id })}
                     className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700"
