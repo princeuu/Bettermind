@@ -4,10 +4,9 @@ import { v } from "convex/values";
 export const createHabit = mutation({
   args: {
     title: v.string(),
-    notes: v.string(),
     startdate: v.number(),
   },
-  handler: async (ctx, { title, notes, startdate }) => {
+  handler: async (ctx, { title, startdate }) => {
     const identity = await ctx.auth.getUserIdentity();
     if (identity === null) {
       throw new Error("Not authenticated");
@@ -16,11 +15,11 @@ export const createHabit = mutation({
     await ctx.db.insert("habits", {
       userId: identity.subject,
       title,
-      notes,
       startDate: startdate ?? now,
       streak: 0,
       createdAt: now,
       updatedAt: now,
+      
     });
   },
 });
@@ -64,3 +63,39 @@ export const numOfHabits = query({
     return count.length;
 
   }});
+
+  export const incrementStreak = mutation({
+    args: { habitId: v.id("habits") },
+    handler: async (ctx, { habitId }) => {
+      const habit = await ctx.db.get(habitId);  
+      if (!habit) {
+        throw new Error("Habit not found");
+      }   
+    
+      const newStreak = (habit.streak ?? 0) + 1;
+      await ctx.db.patch(habitId, {                          
+      streak: newStreak,
+      updatedAt: Date.now(),
+    });
+      return newStreak;
+    } 
+  });
+
+  export const decrementStreak = mutation({
+    args: { habitId: v.id("habits") },
+    handler: async (ctx, { habitId }) => {
+      const habit = await ctx.db.get(habitId);  
+      if (!habit) {
+        throw new Error("Habit not found");
+      }   
+    
+      const newStreak = (habit.streak ?? 0) - 1;
+      await ctx.db.patch(habitId, {
+      streak: newStreak,
+      updatedAt: Date.now(),
+    });
+      return newStreak;
+    } 
+  });
+
+ 

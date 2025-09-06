@@ -5,7 +5,7 @@ import { SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useMemo, useState, useCallback } from "react";
-import { deleteHabit } from "@/convex/habits";
+import { deleteHabit, incrementStreak } from "@/convex/habits";
 import Image from "next/image";
 
 // Accessible tab keys
@@ -23,12 +23,7 @@ export default function Home() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b">
         <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between">
-          <Image
-            src="/BetterMindLogo.png"
-            alt="Logo"
-            width={200}
-            height={50}
-          />
+          <Image src="/BetterMindLogo.png" alt="Logo" width={200} height={50} />
           <div className="flex items-center gap-3">
             <Authenticated>
               <UserButton afterSignOutUrl="/" />
@@ -117,7 +112,9 @@ function Dashboard() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("tasks");
 
   const messages = useQuery(api.messages.getForCurrentUser);
-  const tasksCount = useQuery(api.habits.numOfHabits, { userId: user?.id ?? "" });
+  const tasksCount = useQuery(api.habits.numOfHabits, {
+    userId: user?.id ?? "",
+  });
   const notificationsCount = 2; // TODO: replace with real data
 
   const messageCount = messages?.length ?? 0;
@@ -295,13 +292,14 @@ function TasksTab() {
   const habits = useQuery(api.habits.getHabitsForCurrentUser);
   const createHabit = useMutation(api.habits.createHabit);
   const deleteHabit = useMutation(api.habits.deleteHabit);
-  
+  const incrementStreak = useMutation(api.habits.incrementStreak);
+  const decrementStreak = useMutation(api.habits.decrementStreak);
 
   const onAdd = async () => {
     const t = title.trim();
     if (!t) return;
-    await createHabit({ title: t, notes: "", startdate: Date.now() });
-    setTitle(""); // Convex will live-reload the list
+    await createHabit({ title: t, startdate: Date.now() });
+    setTitle("");
   };
 
   const loading = habits === undefined;
@@ -324,7 +322,6 @@ function TasksTab() {
         >
           ➕
         </button>
-        
       </div>
 
       <div className="rounded-xl border bg-white">
@@ -338,12 +335,29 @@ function TasksTab() {
           <ul className="divide-y">
             {habits.map((h) => (
               <li key={h._id} className="p-3 flex items-center justify-between">
-                <input 
+                <input
                   type="checkbox"
                   className=" h-5 w-5 text-green-600"
+                  onChange={async (e) => {
+                    if (e.target.checked) {
+                      await incrementStreak({ habitId: h._id });
+                    } else {
+                      await decrementStreak({ habitId: h._id });
+                    }
+                  }}
                 />
                 <span className="font-medium p-4 mr-auto">{h.title}</span>
+                {h.streak > 0 && (
+                  <div className=" h-7" aria-label="fire emoji">
+                    <p className="inline-block"> {h.streak ?? 0} </p>
+                    <span role="img" aria-label="fire emoji">
+                      🔥
+                    </span>
+                  </div>
+                )}
+
                 <span className="text-xs text-gray-500">
+                  <div className="inline-block mx-4">|</div>
                   {new Date(h.createdAt).toLocaleDateString()}
                   <div className="inline-block mx-4">|</div>
                   <button
